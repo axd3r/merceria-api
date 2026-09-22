@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS agreed_price numeric(12,2);
+COMMIT;
