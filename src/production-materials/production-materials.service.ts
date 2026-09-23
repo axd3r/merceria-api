@@ -1,3 +1,4 @@
+import { lockProduction } from '../common/order-workflow';
 import {
   BadRequestException,
   Injectable,
@@ -20,12 +21,12 @@ export class ProductionMaterialsService {
   ) {}
 
   private async editableProduction(manager: EntityManager, id: string) {
-    const production = await manager.findOne(Production, {
-      where: { id },
-      lock: { mode: 'pessimistic_write' },
-    });
+    const production = await lockProduction(manager, id);
     if (!production) throw new NotFoundException('Production not found');
-    if (!['PENDING', 'IN_PROGRESS'].includes(production.status)) {
+    if (
+      ['CANCELLED', 'DELIVERED'].includes(production.order.status) ||
+      !['PENDING', 'IN_PROGRESS'].includes(production.status)
+    ) {
       throw new BadRequestException(
         'Materials can only be changed in pending or in-progress productions',
       );

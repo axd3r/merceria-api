@@ -1,4 +1,9 @@
 import {
+  assertCancellable,
+  cancelOrder,
+  lockOrder,
+} from '../common/order-workflow';
+import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -231,6 +236,7 @@ export class OrdersService {
 
   async update(id: string, updateOrderDto: UpdateOrderDto): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
+      await lockOrder(manager, id);
       const order = await manager.findOne(Order, {
         where: { id },
         relations: {
@@ -293,52 +299,42 @@ export class OrdersService {
   }
 
   async remove(id: string): Promise<void> {
-    const order = await this.orderRepository.findOne({
-      where: { id },
+    await this.dataSource.transaction(async (manager) => {
+      const order = await lockOrder(manager, id);
+      if (order.status !== 'PENDING')
+        throw new BadRequestException('Only pending orders can be deleted');
+      await assertCancellable(manager, order);
+      if (await manager.count(Production, { where: { order: { id } } })) {
+        throw new BadRequestException(
+          'Use cancellation to preserve the production history',
+        );
+      }
+      await manager.remove(Order, order);
     });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (order.status !== 'PENDING') {
-      throw new BadRequestException('Only pending orders can be deleted');
-    }
-
-    await this.orderRepository.remove(order);
   }
 
   async confirm(id: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id },
-      relations: {
-        items: true,
-      },
+    return this.dataSource.transaction(async (manager) => {
+      const order = await lockOrder(manager, id);
+      if (order.status !== 'PENDING')
+        throw new BadRequestException('Only pending orders can be confirmed');
+      const count = await manager.count(OrderItem, {
+        where: { order: { id } },
+      });
+      if (!count && order.agreedPrice == null)
+        throw new BadRequestException(
+          'Order must have items or an agreed price',
+        );
+      if (Number(order.total) <= 0)
+        throw new BadRequestException('Order total must be greater than zero');
+      order.status = 'CONFIRMED';
+      return manager.save(Order, order);
     });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (order.status !== 'PENDING') {
-      throw new BadRequestException('Only pending orders can be confirmed');
-    }
-
-    if (order.items.length === 0 && order.agreedPrice == null) {
-      throw new BadRequestException('Order must have items or an agreed price');
-    }
-
-    if (Number(order.total) <= 0) {
-      throw new BadRequestException('Order total must be greater than zero');
-    }
-
-    order.status = 'CONFIRMED';
-
-    return this.orderRepository.save(order);
   }
 
   async start(id: string): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
+      await lockOrder(manager, id);
       const order = await manager.findOne(Order, {
         where: { id },
         relations: {
@@ -373,6 +369,7 @@ export class OrdersService {
         }
 
         const inventory = await manager.findOne(Inventory, {
+          lock: { mode: 'pessimistic_write' },
           where: {
             productUnit: {
               id: item.productUnit.id,
@@ -513,28 +510,7 @@ export class OrdersService {
   }
 
   async cancel(id: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id },
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (
-      order.status === 'IN_PROGRESS' ||
-      order.status === 'READY' ||
-      order.status === 'DELIVERED' ||
-      order.status === 'CANCELLED'
-    ) {
-      throw new BadRequestException(
-        'This order cannot be cancelled at its current status',
-      );
-    }
-
-    order.status = 'CANCELLED';
-
-    return this.orderRepository.save(order);
+    return this.dataSource.transaction((manager) => cancelOrder(manager, id));
   }
 
   async recalculate(manager: EntityManager, orderId: string): Promise<Order> {

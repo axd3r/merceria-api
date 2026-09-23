@@ -1,3 +1,5 @@
+import { Roles } from '../auth/auth.decorators';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ProductionCostsDto } from './dto/production-costs.dto';
 import {
@@ -17,10 +19,13 @@ import { CreateProductionDto } from './dto/create-production.dto';
 
 import { UpdateProductionDto } from './dto/update-production.dto';
 
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('productions')
 export class ProductionsController {
   constructor(private readonly productionsService: ProductionsService) {}
 
+  @Roles('ADMIN', 'STAFF')
   @Post()
   create(
     @Body()
@@ -29,11 +34,13 @@ export class ProductionsController {
     return this.productionsService.create(createProductionDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get()
   findAll() {
     return this.productionsService.findAll();
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id/costs')
   @ApiOperation({
     summary: 'Resumen de costos registrados de producción',
@@ -45,37 +52,42 @@ export class ProductionsController {
     return this.productionsService.getCosts(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionsService.findOne(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body()
     updateProductionDto: UpdateProductionDto,
   ) {
     return this.productionsService.update(id, updateProductionDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/start')
-  start(@Param('id') id: string) {
+  start(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionsService.start(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/complete')
-  complete(@Param('id') id: string) {
+  complete(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionsService.complete(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/cancel')
-  cancel(@Param('id') id: string) {
+  cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionsService.cancel(id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionsService.remove(id);
   }
 }

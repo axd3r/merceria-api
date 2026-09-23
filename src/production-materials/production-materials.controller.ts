@@ -1,3 +1,6 @@
+import { ParseUUIDPipe } from '@nestjs/common';
+import { Roles } from '../auth/auth.decorators';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -14,12 +17,15 @@ import { CreateProductionMaterialDto } from './dto/create-production-material.dt
 
 import { UpdateProductionMaterialDto } from './dto/update-production-material.dto';
 
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('production-materials')
 export class ProductionMaterialsController {
   constructor(
     private readonly productionMaterialsService: ProductionMaterialsService,
   ) {}
 
+  @Roles('ADMIN', 'STAFF')
   @Post()
   create(
     @Body()
@@ -28,19 +34,22 @@ export class ProductionMaterialsController {
     return this.productionMaterialsService.create(createProductionMaterialDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get()
   findAll() {
     return this.productionMaterialsService.findAll();
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionMaterialsService.findOne(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body()
     updateProductionMaterialDto: UpdateProductionMaterialDto,
   ) {
@@ -51,7 +60,7 @@ export class ProductionMaterialsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productionMaterialsService.remove(id);
   }
 }

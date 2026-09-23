@@ -1,3 +1,5 @@
+import { HealthController } from './health.controller';
+import { AuthModule } from './auth/auth.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -44,9 +46,13 @@ import { ProductionMaterialsModule } from './production-materials/production-mat
 
         autoLoadEntities: true,
 
-        synchronize: configService.get<string>('DB_SYNCHRONIZE') === 'true',
+        synchronize:
+          configService.get<string>('NODE_ENV') !== 'production' &&
+          configService.get<string>('DB_SYNCHRONIZE') === 'true',
       }),
     }),
+
+    AuthModule,
 
     CustomersModule,
 
@@ -89,7 +95,7 @@ import { ProductionMaterialsModule } from './production-materials/production-mat
     ProductionMaterialsModule,
   ],
 
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

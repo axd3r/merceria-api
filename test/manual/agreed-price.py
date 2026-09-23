@@ -1,8 +1,8 @@
 """Run ONLY against an isolated test DB/API on localhost:3301; creates test records."""
-import json, urllib.request, urllib.error, uuid
+import json, urllib.request, urllib.error, uuid, os
 BASE = 'http://127.0.0.1:3301'
 def req(path, data=None, status=201, method=None):
-    request = urllib.request.Request(BASE+path, data=None if data is None else json.dumps(data).encode(), headers={'Content-Type':'application/json'}, method=method)
+    request = urllib.request.Request(BASE+path, data=None if data is None else json.dumps(data).encode(), headers={'Content-Type':'application/json','Authorization':'Bearer '+os.environ['API_TOKEN']}, method=method)
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             code=response.status; raw=response.read(); body=json.loads(raw) if raw else None

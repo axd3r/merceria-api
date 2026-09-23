@@ -1,0 +1,29 @@
+The 26 generated "should be defined" scaffolds lacked repository providers and failed before this release. They were replaced by real PostgreSQL route/auth/workflow integration coverage in app.e2e-spec.ts. Existing behavioral production tests are retained.
+
+Removed scaffolds:
+- src/quote-items/quote-items.controller.spec.ts
+- src/quote-items/quote-items.service.spec.ts
+- src/purchase-items/purchase-items.service.spec.ts
+- src/purchase-items/purchase-items.controller.spec.ts
+- src/customers/customers.controller.spec.ts
+- src/customers/customers.service.spec.ts
+- src/products/products.service.spec.ts
+- src/products/products.controller.spec.ts
+- src/suppliers/suppliers.controller.spec.ts
+- src/suppliers/suppliers.service.spec.ts
+- src/inventory/inventory.service.spec.ts
+- src/inventory/inventory.controller.spec.ts
+- src/addresses/addresses.controller.spec.ts
+- src/addresses/addresses.service.spec.ts
+- src/inventory-movements/inventory-movements.controller.spec.ts
+- src/inventory-movements/inventory-movements.service.spec.ts
+- src/purchases/purchases.controller.spec.ts
+- src/purchases/purchases.service.spec.ts
+- src/units/units.controller.spec.ts
+- src/units/units.service.spec.ts
+- src/categories/categories.service.spec.ts
+- src/categories/categories.controller.spec.ts
+- src/product-units/product-units.service.spec.ts
+- src/product-units/product-units.controller.spec.ts
+- src/quotes/quotes.controller.spec.ts
+- src/quotes/quotes.service.spec.ts

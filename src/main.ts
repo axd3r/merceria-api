@@ -1,31 +1,21 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { setupApp } from './setup-app';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
+  setupApp(app);
+  await app.listen(
+    Number(process.env.PORT ?? 3000),
+    process.env.HOST ?? '127.0.0.1',
   );
-
-  const config = new DocumentBuilder()
-    .setTitle('Mercería API')
-    .setDescription('API para la gestión de la mercería')
-    .setVersion('1.0')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-
-  SwaggerModule.setup('docs', app, document);
-
-  await app.listen(process.env.PORT ?? 3000);
 }
-
-bootstrap();
+void bootstrap().catch(() => {
+  console.error(
+    'API startup failed. Check database and environment configuration.',
+  );
+  process.exitCode = 1;
+});

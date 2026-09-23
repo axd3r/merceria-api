@@ -1,4 +1,10 @@
 import {
+  assertCancellable,
+  cancelOrder,
+  lockOrder,
+  lockProduction,
+} from '../common/order-workflow';
+import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -37,15 +43,7 @@ export class ProductionsService {
 
   async create(createProductionDto: CreateProductionDto): Promise<Production> {
     return this.dataSource.transaction(async (manager) => {
-      const order = await manager.findOne(Order, {
-        where: {
-          id: createProductionDto.orderId,
-        },
-      });
-
-      if (!order) {
-        throw new NotFoundException('Order not found');
-      }
+      const order = await lockOrder(manager, createProductionDto.orderId);
 
       if (['CANCELLED', 'DELIVERED', 'READY'].includes(order.status)) {
         throw new BadRequestException('This order cannot have production');
@@ -140,42 +138,36 @@ export class ProductionsService {
     };
   }
 
-  async update(
-    id: string,
-    updateProductionDto: UpdateProductionDto,
-  ): Promise<Production> {
-    const production = await this.findOne(id);
-
-    if (production.status !== 'PENDING') {
-      throw new BadRequestException('Only pending productions can be modified');
-    }
-
-    if (
-      updateProductionDto.orderId &&
-      updateProductionDto.orderId !== production.order.id
-    ) {
-      throw new BadRequestException('Production order cannot be changed');
-    }
-
-    if (updateProductionDto.notes !== undefined) {
-      production.notes = updateProductionDto.notes;
-    }
-
-    return this.productionRepository.save(production);
+  async update(id: string, dto: UpdateProductionDto): Promise<Production> {
+    return this.dataSource.transaction(async (manager) => {
+      const production = await lockProduction(manager, id);
+      if (
+        production.status !== 'PENDING' ||
+        ['CANCELLED', 'DELIVERED'].includes(production.order.status)
+      ) {
+        throw new BadRequestException(
+          'Only pending productions can be modified',
+        );
+      }
+      if (dto.orderId && dto.orderId !== production.order.id)
+        throw new BadRequestException('Production order cannot be changed');
+      if (dto.notes !== undefined) production.notes = dto.notes;
+      return manager.save(Production, production);
+    });
   }
 
   async start(id: string): Promise<Production> {
     return this.dataSource.transaction(async (manager) => {
-      const production = await manager.findOne(Production, {
-        where: {
-          id,
-        },
-      });
-
+      const production = await lockProduction(manager, id);
       if (!production) {
         throw new NotFoundException('Production not found');
       }
 
+      if (
+        ['CANCELLED', 'DELIVERED', 'READY'].includes(production.order.status)
+      ) {
+        throw new BadRequestException('This order cannot start production');
+      }
       if (production.status !== 'PENDING') {
         throw new BadRequestException(
           'Only pending productions can be started',
@@ -206,10 +198,7 @@ export class ProductionsService {
 
   async complete(id: string): Promise<Production> {
     return this.dataSource.transaction(async (manager) => {
-      const production = await manager.findOne(Production, {
-        where: { id },
-        lock: { mode: 'pessimistic_write' },
-      });
+      const production = await lockProduction(manager, id);
       if (!production) throw new NotFoundException('Production not found');
       if (!['IN_PROGRESS', 'COMPLETED'].includes(production.status)) {
         throw new BadRequestException(
@@ -226,14 +215,7 @@ export class ProductionsService {
           'All production tasks must be completed before completing the production',
         );
       }
-      const linked = await manager.findOneOrFail(Production, {
-        where: { id },
-        relations: { order: true },
-      });
-      const order = await manager.findOneOrFail(Order, {
-        where: { id: linked.order.id },
-        lock: { mode: 'pessimistic_write' },
-      });
+      const order = production.order;
       if (order.status === 'CANCELLED' || order.status === 'DELIVERED') {
         throw new BadRequestException('This order cannot be marked as ready');
       }
@@ -269,27 +251,25 @@ export class ProductionsService {
   }
 
   async cancel(id: string): Promise<Production> {
-    const production = await this.findOne(id);
-
-    if (
-      production.status === 'COMPLETED' ||
-      production.status === 'CANCELLED'
-    ) {
-      throw new BadRequestException('This production cannot be cancelled');
-    }
-
-    production.status = 'CANCELLED';
-
-    return this.productionRepository.save(production);
+    return this.dataSource.transaction(async (manager) => {
+      const production = await lockProduction(manager, id);
+      await cancelOrder(manager, production.order.id);
+      return manager.findOneOrFail(Production, {
+        where: { id },
+        relations: { order: true },
+      });
+    });
   }
 
   async remove(id: string): Promise<void> {
-    const production = await this.findOne(id);
-
-    if (production.status !== 'PENDING') {
-      throw new BadRequestException('Only pending productions can be deleted');
-    }
-
-    await this.productionRepository.remove(production);
+    await this.dataSource.transaction(async (manager) => {
+      const production = await lockProduction(manager, id);
+      await assertCancellable(manager, production.order);
+      if (production.status !== 'PENDING')
+        throw new BadRequestException(
+          'Only pending productions can be deleted',
+        );
+      await manager.remove(Production, production);
+    });
   }
 }

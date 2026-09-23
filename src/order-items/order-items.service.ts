@@ -1,3 +1,4 @@
+import { lockOrder } from '../common/order-workflow';
 import {
   BadRequestException,
   Injectable,
@@ -32,12 +33,7 @@ export class OrderItemsService {
 
   async create(createOrderItemDto: CreateOrderItemDto): Promise<OrderItem> {
     return this.dataSource.transaction(async (manager) => {
-      const order = await manager.findOne(Order, {
-        where: {
-          id: createOrderItemDto.orderId,
-        },
-      });
-
+      const order = await lockOrder(manager, createOrderItemDto.orderId);
       if (!order) {
         throw new NotFoundException('Order not found');
       }
@@ -181,6 +177,7 @@ export class OrderItemsService {
         throw new NotFoundException('Order item not found');
       }
 
+      orderItem.order = await lockOrder(manager, orderItem.order.id);
       if (orderItem.order.status !== 'PENDING') {
         throw new BadRequestException('Only pending orders can be modified');
       }
@@ -234,6 +231,7 @@ export class OrderItemsService {
         throw new NotFoundException('Order item not found');
       }
 
+      orderItem.order = await lockOrder(manager, orderItem.order.id);
       if (orderItem.order.status !== 'PENDING') {
         throw new BadRequestException('Only pending orders can be modified');
       }

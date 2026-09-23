@@ -1,3 +1,6 @@
+import { ParseUUIDPipe } from '@nestjs/common';
+import { Roles } from '../auth/auth.decorators';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -12,40 +15,39 @@ import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
 import { UnitsService } from './units.service';
 
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('units')
 export class UnitsController {
-  constructor(
-    private readonly unitsService: UnitsService,
-  ) {}
+  constructor(private readonly unitsService: UnitsService) {}
 
   @Post()
   create(@Body() createUnitDto: CreateUnitDto) {
     return this.unitsService.create(createUnitDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get()
   findAll() {
     return this.unitsService.findAll();
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.unitsService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUnitDto: UpdateUnitDto,
   ) {
-    return this.unitsService.update(
-      id,
-      updateUnitDto,
-    );
+    return this.unitsService.update(id, updateUnitDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.unitsService.remove(id);
   }
 }

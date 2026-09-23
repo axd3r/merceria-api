@@ -1,3 +1,6 @@
+import { ParseUUIDPipe } from '@nestjs/common';
+import { Roles } from '../auth/auth.decorators';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -13,10 +16,13 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Roles('ADMIN', 'STAFF')
   @Post()
   create(
     @Body()
@@ -25,57 +31,66 @@ export class OrdersController {
     return this.ordersService.create(createOrderDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get()
   findAll() {
     return this.ordersService.findAll();
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id/balance')
-  getBalance(@Param('id') id: string) {
+  getBalance(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.getBalance(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.findOne(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body()
     updateOrderDto: UpdateOrderDto,
   ) {
     return this.ordersService.update(id, updateOrderDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/confirm')
-  confirm(@Param('id') id: string) {
+  confirm(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.confirm(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/start')
-  start(@Param('id') id: string) {
+  start(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.start(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/ready')
-  ready(@Param('id') id: string) {
+  ready(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.ready(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/deliver')
-  deliver(@Param('id') id: string) {
+  deliver(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.deliver(id);
   }
 
+  @Roles('ADMIN', 'STAFF')
   @Post(':id/cancel')
-  cancel(@Param('id') id: string) {
+  cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.cancel(id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.remove(id);
   }
 }

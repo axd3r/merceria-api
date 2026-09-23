@@ -1,6 +1,6 @@
 {
   "name": "merceria-api",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "",
   "author": "",
   "private": true,
@@ -19,7 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:materials": "node scripts/update-production-materials.cjs",
-    "db:order-price": "node scripts/update-order-price.cjs"
+    "db:order-price": "node scripts/update-order-price.cjs",
+    "db:migrate": "node scripts/migrate.cjs",
+    "auth:create-admin": "node scripts/create-admin.cjs",
+    "test:release": "jest --config test/jest-e2e.json --runInBand",
+    "db:backup": "node scripts/backup.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -78,5 +82,14 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": "2.3.0"
+    }
   }
 }
